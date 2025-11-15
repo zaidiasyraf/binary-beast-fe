@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 
 interface Message {
@@ -217,6 +217,11 @@ export default function Chat() {
     }
   }
 
+  const activeSession = useMemo(
+    () => chatSessions.find(session => session.id === currentSessionId),
+    [chatSessions, currentSessionId]
+  )
+
   const toggleCtaDropdown = (messageId: number) => {
     setActiveCtaMessageId(prev => (prev === messageId ? null : messageId))
   }
@@ -226,25 +231,89 @@ export default function Chat() {
     setActiveCtaMessageId(null)
   }
 
-  const captureAssistantMessage = async (messageId: number) => {
+  const createAssistantSnapshot = async (messageId: number) => {
     const target = messageRefs.current[messageId]
-    if (!target) return
+    if (!target) return null
 
     try {
       const canvas = await html2canvas(target, {
         backgroundColor: null,
-        scale: 2
+        scale: window.devicePixelRatio > 1 ? 1.5 : 2
       })
       const dataUrl = canvas.toDataURL('image/png')
-      const link = document.createElement('a')
-      link.href = dataUrl
-      link.download = `assistant-message-${messageId}.png`
-      link.click()
+      const blob =
+        (await new Promise<Blob | null>(resolve => {
+          canvas.toBlob(b => resolve(b), 'image/png')
+        })) ?? (await fetch(dataUrl).then(res => res.blob()))
+      return { dataUrl, blob }
     } catch (error) {
       console.error('Failed to capture assistant message', error)
-    } finally {
-      setActiveCtaMessageId(null)
+      return null
     }
+  }
+
+  const downloadSnapshot = (dataUrl: string, messageId: number) => {
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = `assistant-message-${messageId}.png`
+    link.click()
+  }
+
+  const captureAssistantMessage = async (messageId: number) => {
+    const snapshot = await createAssistantSnapshot(messageId)
+    if (!snapshot) {
+      setActiveCtaMessageId(null)
+      return
+    }
+    downloadSnapshot(snapshot.dataUrl, messageId)
+    setActiveCtaMessageId(null)
+  }
+
+  const handleGmailShare = async (message: Message) => {
+    const snapshot = await createAssistantSnapshot(message.id)
+    if (!snapshot) {
+      setActiveCtaMessageId(null)
+      return
+    }
+
+    const clipboardSupported =
+      typeof ClipboardItem !== 'undefined' &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.write === 'function'
+
+    if (clipboardSupported) {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'image/png': snapshot.blob
+          })
+        ])
+      } catch (error) {
+        console.warn('Clipboard not accessible, falling back to download.', error)
+        downloadSnapshot(snapshot.dataUrl, message.id)
+      }
+    } else {
+      downloadSnapshot(snapshot.dataUrl, message.id)
+    }
+
+    const subject =
+      activeSession?.title?.replace(/\s+/g, ' ').trim() || 'BB Neuro Insight Update'
+    const snippet = message.text.replace(/\s+/g, ' ').trim().slice(0, 300)
+
+    const composeUrl = new URL('https://mail.google.com/mail/')
+    composeUrl.searchParams.set('view', 'cm')
+    composeUrl.searchParams.set('fs', '1')
+    composeUrl.searchParams.set('tf', '1')
+    composeUrl.searchParams.set('su', subject)
+    composeUrl.searchParams.set(
+      'body',
+      snippet
+        ? `${snippet}\n\nSnapshot copied to clipboard—paste or attach as needed.`
+        : 'Snapshot copied to clipboard—paste or attach as needed.'
+    )
+
+    window.open(composeUrl.toString(), '_blank', 'noopener,noreferrer')
+    setActiveCtaMessageId(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -393,7 +462,7 @@ export default function Chat() {
                             id: 'gmail',
                             label: 'Gmail',
                             icon: '/gmail.png',
-                            handler: () => handleCtaSelect('Gmail')
+                            handler: () => handleGmailShare(message)
                           }
                         ].map(action => (
                           <button

@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'BB Neuro Clone',
-  description: 'A simple chat AI interface',
+  title: 'Neuro Insight',
+  description: 'Customer Behaviour Intelligence Engine',
 }
 
 export default function RootLayout({
