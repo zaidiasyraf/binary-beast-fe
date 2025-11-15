@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import html2canvas from 'html2canvas'
 
 interface Message {
   id: number
@@ -35,6 +36,7 @@ export default function Chat() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [activeCtaMessageId, setActiveCtaMessageId] = useState<number | null>(null)
+  const messageRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const formatText = (text: string) => {
     return text
@@ -224,6 +226,27 @@ export default function Chat() {
     setActiveCtaMessageId(null)
   }
 
+  const captureAssistantMessage = async (messageId: number) => {
+    const target = messageRefs.current[messageId]
+    if (!target) return
+
+    try {
+      const canvas = await html2canvas(target, {
+        backgroundColor: null,
+        scale: 2
+      })
+      const dataUrl = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.href = dataUrl
+      link.download = `assistant-message-${messageId}.png`
+      link.click()
+    } catch (error) {
+      console.error('Failed to capture assistant message', error)
+    } finally {
+      setActiveCtaMessageId(null)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
@@ -320,7 +343,12 @@ export default function Chat() {
             if (message.sender === 'assistant') {
               return (
                 <div key={message.id} className="assistant-interaction">
-                  <div className="message assistant-message">
+                  <div
+                    className="message assistant-message"
+                    ref={el => {
+                      messageRefs.current[message.id] = el
+                    }}
+                  >
                     <strong>Assistant:</strong>
                     <div className="response-container">
                       {renderAssistantContent(message.text)}
@@ -343,15 +371,36 @@ export default function Chat() {
                     {activeCtaMessageId === message.id && (
                       <div className="cta-dropup">
                         {[
-                          { id: 'gchat', label: 'Google Chat', icon: '/gchat.png' },
-                          { id: 'calendar', label: 'Calendar', icon: '/calender.png' },
-                          { id: 'gmail', label: 'Gmail', icon: '/gmail.png' }
+                          {
+                            id: 'gallery',
+                            label: 'Download Snapshot',
+                            icon: '/gallery.png',
+                            handler: () => captureAssistantMessage(message.id)
+                          },
+                          {
+                            id: 'gchat',
+                            label: 'Google Chat',
+                            icon: '/gchat.png',
+                            handler: () => handleCtaSelect('Google Chat')
+                          },
+                          {
+                            id: 'calendar',
+                            label: 'Calendar',
+                            icon: '/calender.png',
+                            handler: () => handleCtaSelect('Calendar')
+                          },
+                          {
+                            id: 'gmail',
+                            label: 'Gmail',
+                            icon: '/gmail.png',
+                            handler: () => handleCtaSelect('Gmail')
+                          }
                         ].map(action => (
                           <button
                             key={action.id}
                             type="button"
                             className="cta-icon"
-                            onClick={() => handleCtaSelect(action.label)}
+                            onClick={action.handler}
                             aria-label={action.label}
                           >
                             <img src={action.icon} alt={action.label} />
