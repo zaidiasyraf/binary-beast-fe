@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'ChatGPT Clone',
-  description: 'A simple ChatGPT-like interface',
+  title: 'BB Neuro Clone',
+  description: 'A simple chat AI interface',
 }
 
 export default function RootLayout({

@@ -128,7 +128,7 @@ export default function Chat() {
     <div className="app-wrapper">
       <div className="logo">
         <img src="/logo.png" alt="Logo" className="logo-icon" />
-        <div className="logo-text">ChatGPT</div>
+        <div className="logo-text">BB Neuro Insight</div>
       </div>
       <div className="app-container">
         <div className="sidebar">
