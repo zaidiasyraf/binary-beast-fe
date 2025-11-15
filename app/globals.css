@@ -340,7 +340,7 @@ body {
 
 .assistant-interaction {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: flex-start;
   gap: 16px;
   margin-bottom: 20px;
@@ -360,7 +360,7 @@ body {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
-  align-self: flex-end;
+  align-self: auto;
 }
 
 .cta-button {
@@ -383,8 +383,9 @@ body {
 .cta-dropup {
   position: absolute;
   bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(-20% + 12px);
+  right: auto;
+  transform: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
