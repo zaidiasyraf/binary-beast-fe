@@ -9,11 +9,13 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message }),
+      timeout: 10000
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      console.error(`API returned ${response.status}: ${response.statusText}`)
+      throw new Error(`External API error: ${response.status}`)
     }
 
     const data = await response.json()
@@ -23,9 +25,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('API Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch response' },
-      { status: 500 }
-    )
+    
+    // Fallback mock response when external API is down
+    const mockResponse = `I apologize, but the AI service is currently unavailable (Error 503). This is a mock response to demonstrate the chat functionality.
+
+Your message: "${(await request.json()).message}"
+
+Please try again later when the service is restored.`
+    
+    return new Response(mockResponse, {
+      headers: { 'Content-Type': 'text/plain' }
+    })
   }
 }

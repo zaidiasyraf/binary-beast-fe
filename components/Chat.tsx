@@ -22,6 +22,14 @@ export default function Chat() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
 
+  const formatText = (text: string) => {
+    return text
+      .replace(/\n/g, '<br>')
+      .replace(/(\d+\.)\s/g, '<br>$1 ')
+      .replace(/^\s*-\s/gm, '<br>• ')
+      .replace(/^<br>/, '')
+  }
+
   const createNewChat = () => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
@@ -152,7 +160,7 @@ export default function Chat() {
             >
               <strong>{message.sender === 'user' ? 'You' : 'Assistant'}:</strong>
               <div className={message.sender === 'assistant' ? 'response-container' : ''}>
-                <div>{message.text}</div>
+                <div dangerouslySetInnerHTML={{ __html: message.sender === 'assistant' ? formatText(message.text) : message.text }} />
                 {message.sender === 'assistant' && (
                   <button className="cta-button">
                     Send email to Ops
