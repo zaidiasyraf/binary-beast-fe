@@ -332,25 +332,31 @@ export default function Chat() {
                       className="cta-button"
                       onClick={() => toggleCtaDropdown(message.id)}
                       aria-expanded={activeCtaMessageId === message.id}
+                      aria-label="Open quick actions"
                     >
-                      CTA
+                      <span className="cta-button-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 4l4 4h-3v4h-2V8H8l4-4zm-6 10h12v6H6v-6z" />
+                        </svg>
+                      </span>
                     </button>
                     {activeCtaMessageId === message.id && (
                       <div className="cta-dropup">
-                        <button
-                          type="button"
-                          className="cta-option"
-                          onClick={() => handleCtaSelect('Send email to Ops')}
-                        >
-                          Send email to Ops
-                        </button>
-                        <button
-                          type="button"
-                          className="cta-option"
-                          onClick={() => handleCtaSelect('Create CRM Task')}
-                        >
-                          Create CRM Task
-                        </button>
+                        {[
+                          { id: 'gchat', label: 'Google Chat', icon: '/gchat.png' },
+                          { id: 'calendar', label: 'Calendar', icon: '/calender.png' },
+                          { id: 'gmail', label: 'Gmail', icon: '/gmail.png' }
+                        ].map(action => (
+                          <button
+                            key={action.id}
+                            type="button"
+                            className="cta-icon"
+                            onClick={() => handleCtaSelect(action.label)}
+                            aria-label={action.label}
+                          >
+                            <img src={action.icon} alt={action.label} />
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
