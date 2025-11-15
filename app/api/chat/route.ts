@@ -11,8 +11,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         ...(sessionId ? { 'X-Session-Id': sessionId } : {})
       },
-      body: JSON.stringify({ message }),
-      timeout: 10000
+      body: JSON.stringify({ message })
     })
 
     if (!response.ok) {
