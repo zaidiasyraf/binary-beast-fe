@@ -34,6 +34,7 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false)
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [activeCtaMessageId, setActiveCtaMessageId] = useState<number | null>(null)
 
   const formatText = (text: string) => {
     return text
@@ -169,7 +170,7 @@ export default function Chat() {
           <div className="suggestion-block">
             <div className="suggestion-header">
               <span className="suggestion-pill">{suggestionTitle || 'Suggestions'}</span>
-              <span className="suggestion-hint">AI recommended next steps</span>
+              <span className="suggestion-hint">AI recommended</span>
             </div>
             <div
               className="suggestion-body"
@@ -212,6 +213,15 @@ export default function Chat() {
           : session
       ))
     }
+  }
+
+  const toggleCtaDropdown = (messageId: number) => {
+    setActiveCtaMessageId(prev => (prev === messageId ? null : messageId))
+  }
+
+  const handleCtaSelect = (action: string) => {
+    console.log(`CTA selected: ${action}`)
+    setActiveCtaMessageId(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,25 +316,60 @@ export default function Chat() {
       
       <div className="chat-container">
         <div className="messages">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`message ${message.sender === 'user' ? 'user-message' : 'assistant-message'}`}
-            >
-              <strong>{message.sender === 'user' ? 'You' : 'Assistant'}:</strong>
-              <div className={message.sender === 'assistant' ? 'response-container' : ''}>
-                {message.sender === 'assistant'
-                  ? renderAssistantContent(message.text)
-                  : <div>{message.text}</div>
-                }
-                {message.sender === 'assistant' && (
-                  <button className="cta-button">
-                    Send email to Ops
-                  </button>
-                )}
+          {messages.map((message) => {
+            if (message.sender === 'assistant') {
+              return (
+                <div key={message.id} className="assistant-interaction">
+                  <div className="message assistant-message">
+                    <strong>Assistant:</strong>
+                    <div className="response-container">
+                      {renderAssistantContent(message.text)}
+                    </div>
+                  </div>
+                  <div className="cta-container">
+                    <button
+                      type="button"
+                      className="cta-button"
+                      onClick={() => toggleCtaDropdown(message.id)}
+                      aria-expanded={activeCtaMessageId === message.id}
+                    >
+                      CTA
+                    </button>
+                    {activeCtaMessageId === message.id && (
+                      <div className="cta-dropup">
+                        <button
+                          type="button"
+                          className="cta-option"
+                          onClick={() => handleCtaSelect('Send email to Ops')}
+                        >
+                          Send email to Ops
+                        </button>
+                        <button
+                          type="button"
+                          className="cta-option"
+                          onClick={() => handleCtaSelect('Create CRM Task')}
+                        >
+                          Create CRM Task
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <div
+                key={message.id}
+                className={`message ${message.sender === 'user' ? 'user-message' : 'assistant-message'}`}
+              >
+                <strong>{message.sender === 'user' ? 'You' : 'Assistant'}:</strong>
+                <div>
+                  <div>{message.text}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           {isLoading && (
             <div className="message assistant-message">
               <strong>Assistant:</strong>

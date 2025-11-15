@@ -23,7 +23,6 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
   padding: 8px 0;
 }
 
@@ -99,7 +98,7 @@ body {
   border-radius: 3px;
 }
 
-.chat-item, .cta-button {
+.chat-item {
   padding: 12px;
   margin-bottom: 8px;
   border-radius: 12px;
@@ -110,7 +109,7 @@ body {
   transition: all 0.3s ease;
 }
 
-.chat-item:hover, .cta-button:hover {
+.chat-item:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: translateX(4px);
 }
@@ -186,7 +185,8 @@ body {
 
 .assistant-message {
   background: rgba(23, 25, 83, 0.3);
-  margin-right: 20%;
+  margin-right: 0;
+  max-width: 70%;
   border: 1px solid rgba(23, 25, 83, 0.4);
 }
 
@@ -338,27 +338,78 @@ body {
   box-shadow: none;
 }
 
+.assistant-interaction {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.assistant-interaction .message {
+  margin-bottom: 0;
+}
+
 .response-container {
   position: relative;
 }
 
+.cta-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  align-self: flex-end;
+}
+
 .cta-button {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  padding: 12px 14px;
-  margin-bottom: 0px;
-  color: white;
-  border: none;
-  border-radius: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
   font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(23, 25, 83, 0.5);
+  color: white;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
 }
 
 .cta-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(241, 31, 185, 0.3);
+  box-shadow: 0 4px 16px rgba(241, 31, 185, 0.4);
+}
+
+.cta-dropup {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(12, 14, 54, 0.9);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  z-index: 3;
+  min-width: 190px;
+}
+
+.cta-option {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cta-option:hover {
+  background: rgba(241, 31, 185, 0.25);
+  transform: translateY(-1px);
 }
