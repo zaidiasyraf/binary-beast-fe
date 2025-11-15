@@ -15,6 +15,19 @@ interface ChatSession {
   createdAt: Date
 }
 
+interface MarkdownTable {
+  headers: string[]
+  rows: string[][]
+  beforeText: string
+  afterText: string
+}
+
+interface SuggestionSection {
+  mainText: string
+  suggestionTitle?: string
+  suggestionBody?: string
+}
+
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -30,16 +43,156 @@ export default function Chat() {
       .replace(/^<br>/, '')
   }
 
-  const createNewChat = () => {
+  const extractMarkdownTable = (text: string): MarkdownTable | null => {
+    const lines = text.split('\n')
+    let start = -1
+    let end = -1
+
+    const isTableLine = (line: string) => /^\s*\|.*\|\s*$/.test(line.trim())
+
+    for (let i = 0; i < lines.length; i++) {
+      if (isTableLine(lines[i])) {
+        start = i
+        break
+      }
+    }
+
+    if (start === -1) return null
+
+    for (let i = start; i < lines.length; i++) {
+      if (!isTableLine(lines[i])) {
+        end = i
+        break
+      }
+    }
+
+    if (end === -1) end = lines.length
+
+    const tableLines = lines.slice(start, end)
+    const rows = tableLines
+      .map(line =>
+        line
+          .trim()
+          .replace(/^\|/, '')
+          .replace(/\|$/, '')
+          .split('|')
+          .map(cell => cell.trim())
+      )
+      .filter(row => row.length)
+
+    if (rows.length < 2) return null
+
+    const [headerRow, ...rest] = rows
+    if (!rest.length) return null
+
+    const dividerRow = rest[0]
+    const dividerValid = dividerRow.every(cell => /^:?-{3,}:?$/.test(cell))
+    if (!dividerValid) return null
+
+    const dataRows = rest.slice(1).filter(row => row.some(cell => cell.length))
+    if (!dataRows.length) return null
+
+    return {
+      headers: headerRow,
+      rows: dataRows,
+      beforeText: lines.slice(0, start).join('\n').trim(),
+      afterText: lines.slice(end).join('\n').trim()
+    }
+  }
+
+  const separateSuggestionSection = (text: string): SuggestionSection => {
+    const suggestionRegex = /(Suggestions?[^:\n]*:)/i
+    const match = suggestionRegex.exec(text)
+
+    if (!match) {
+      return { mainText: text.trim() }
+    }
+
+    const startIndex = match.index
+    const rawLabel = match[1] ?? ''
+    const label = rawLabel.replace(/:$/, '').trim()
+    const mainText = text.slice(0, startIndex).trim()
+    const suggestionBody = text.slice(startIndex + rawLabel.length).trim()
+
+    return {
+      mainText,
+      suggestionTitle: label || 'Suggestions',
+      suggestionBody
+    }
+  }
+
+  const renderAssistantContent = (text: string) => {
+    const { mainText, suggestionTitle, suggestionBody } = separateSuggestionSection(text)
+    const tableData = extractMarkdownTable(mainText)
+    const hasMainContent = Boolean(mainText)
+
+    return (
+      <>
+        {tableData ? (
+          <div className="structured-response">
+            {tableData.beforeText && (
+              <div dangerouslySetInnerHTML={{ __html: formatText(tableData.beforeText) }} />
+            )}
+            <div className="structured-table-wrapper">
+              <table className="structured-table">
+                <thead>
+                  <tr>
+                    {tableData.headers.map((header, index) => (
+                      <th key={`${header}-${index}`}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.rows.map((row, rowIndex) => (
+                    <tr key={`row-${rowIndex}`}>
+                      {row.map((cell, cellIndex) => (
+                        <td key={`cell-${rowIndex}-${cellIndex}`}>
+                          <div dangerouslySetInnerHTML={{ __html: formatText(cell) }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {tableData.afterText && (
+              <div dangerouslySetInnerHTML={{ __html: formatText(tableData.afterText) }} />
+            )}
+          </div>
+        ) : (
+          hasMainContent && (
+            <div dangerouslySetInnerHTML={{ __html: formatText(mainText) }} />
+          )
+        )}
+
+        {suggestionBody && (
+          <div className="suggestion-block">
+            <div className="suggestion-header">
+              <span className="suggestion-pill">{suggestionTitle || 'Suggestions'}</span>
+              <span className="suggestion-hint">AI recommended next steps</span>
+            </div>
+            <div
+              className="suggestion-body"
+              dangerouslySetInnerHTML={{ __html: formatText(suggestionBody) }}
+            />
+          </div>
+        )}
+      </>
+    )
+  }
+
+  const createNewChat = (): string => {
+    const newSessionId = crypto.randomUUID()
     const newSession: ChatSession = {
-      id: Date.now().toString(),
+      id: newSessionId,
       title: 'New Chat',
       messages: [],
       createdAt: new Date()
     }
     setChatSessions(prev => [newSession, ...prev])
-    setCurrentSessionId(newSession.id)
+    setCurrentSessionId(newSessionId)
     setMessages([])
+    return newSessionId
   }
 
   const selectChat = (sessionId: string) => {
@@ -50,10 +203,11 @@ export default function Chat() {
     }
   }
 
-  const updateCurrentSession = (newMessages: Message[]) => {
-    if (currentSessionId) {
+  const updateCurrentSession = (newMessages: Message[], sessionIdOverride?: string) => {
+    const targetSessionId = sessionIdOverride ?? currentSessionId
+    if (targetSessionId) {
       setChatSessions(prev => prev.map(session => 
-        session.id === currentSessionId 
+        session.id === targetSessionId
           ? { ...session, messages: newMessages, title: newMessages[0]?.text.slice(0, 30) + '...' || 'New Chat' }
           : session
       ))
@@ -65,9 +219,7 @@ export default function Chat() {
     if (!input.trim() || isLoading) return
 
     // Create new session if none exists
-    if (!currentSessionId) {
-      createNewChat()
-    }
+    const activeSessionId = currentSessionId ?? createNewChat()
 
     const userMessage: Message = {
       id: Date.now(),
@@ -77,7 +229,7 @@ export default function Chat() {
 
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
-    updateCurrentSession(newMessages)
+    updateCurrentSession(newMessages, activeSessionId)
     
     const currentInput = input
     setInput('')
@@ -88,6 +240,7 @@ export default function Chat() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Session-Id': activeSessionId
         },
         body: JSON.stringify({
           message: currentInput
@@ -107,7 +260,7 @@ export default function Chat() {
       
       const finalMessages = [...newMessages, assistantMessage]
       setMessages(finalMessages)
-      updateCurrentSession(finalMessages)
+      updateCurrentSession(finalMessages, activeSessionId)
     } catch (error) {
       console.error('API Error:', error)
       const errorMessage: Message = {
@@ -118,7 +271,7 @@ export default function Chat() {
       
       const finalMessages = [...newMessages, errorMessage]
       setMessages(finalMessages)
-      updateCurrentSession(finalMessages)
+      updateCurrentSession(finalMessages, activeSessionId)
     } finally {
       setIsLoading(false)
     }
@@ -160,7 +313,10 @@ export default function Chat() {
             >
               <strong>{message.sender === 'user' ? 'You' : 'Assistant'}:</strong>
               <div className={message.sender === 'assistant' ? 'response-container' : ''}>
-                <div dangerouslySetInnerHTML={{ __html: message.sender === 'assistant' ? formatText(message.text) : message.text }} />
+                {message.sender === 'assistant'
+                  ? renderAssistantContent(message.text)
+                  : <div>{message.text}</div>
+                }
                 {message.sender === 'assistant' && (
                   <button className="cta-button">
                     Send email to Ops

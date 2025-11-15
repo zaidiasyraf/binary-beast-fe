@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const { message } = await request.json()
+    const sessionId = request.headers.get('x-session-id')
 
     const response = await fetch('http://Binarybeast-be-2-env.eba-ygepewfy.ap-southeast-1.elasticbeanstalk.com/api/bedrock/chat/rag', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(sessionId ? { 'X-Session-Id': sessionId } : {})
       },
       body: JSON.stringify({ message }),
       timeout: 10000
