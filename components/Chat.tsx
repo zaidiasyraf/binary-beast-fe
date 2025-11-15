@@ -76,7 +76,7 @@ export default function Chat() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8080/api/bedrock/chat', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,6 +85,9 @@ export default function Chat() {
           message: currentInput
         })
       })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
       const data = await response.text()
       
@@ -98,9 +101,10 @@ export default function Chat() {
       setMessages(finalMessages)
       updateCurrentSession(finalMessages)
     } catch (error) {
+      console.error('API Error:', error)
       const errorMessage: Message = {
         id: Date.now() + 1,
-        text: 'Sorry, I encountered an error. Please try again.',
+        text: `Error: ${error instanceof Error ? error.message : 'Network error'}`,
         sender: 'assistant'
       }
       
