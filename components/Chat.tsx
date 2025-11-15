@@ -283,6 +283,11 @@ export default function Chat() {
 
     if (clipboardSupported) {
       try {
+        if (!snapshot.blob) {
+          console.error("Snapshot blob is null");
+          downloadSnapshot(snapshot.dataUrl, message.id);
+          return;
+        }
         await navigator.clipboard.write([
           new ClipboardItem({
             'image/png': snapshot.blob
